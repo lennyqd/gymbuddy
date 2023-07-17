@@ -41,7 +41,9 @@ dependencies:
   geolocator: ^8.0.5
   permission_handler: ^9.0.0
   firebase_database: ^10.0.0
-  flutter_typeahead: ^4.1.0
+  flutter_gif: any
+  provider: ^5.0.0
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +66,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - images/jump.gif
 
   # To add assets to your application, add an assets section, like this:
   # assets:

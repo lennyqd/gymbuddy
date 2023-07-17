@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:math';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +40,6 @@ class AuthService {
       throw Exception('Error signing in with email and password: $e');
     }
   }
-
   Future<void> signOut() async {
     try {
       await _auth.signOut();
@@ -57,16 +57,68 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gym Buddy',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) => Home(),
-        '/loginwp': (context) => LoginWPPage(),
-        '/register': (context) => RegisterPage(),
-        '/display': (context) => DisplayPage(user: user),
-        '/viewTasks': (context) => TaskListPage(),
+      onGenerateRoute: (RouteSettings settings) {
+        switch (settings.name) {
+          case '/':
+            return PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => Home(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+            );
+          case '/loginwp':
+            return PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => LoginWPPage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(1.0, 0.0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
+              },
+            );
+          case '/register':
+            return PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return ScaleTransition(
+                  scale: animation,
+                  child: child,
+                );
+              },
+            );
+          case '/display':
+            return PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => DisplayPage(user: user),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+            );
+          case '/viewTasks':
+            return PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => TaskListPage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return ScaleTransition(
+                  scale: animation,
+                  child: child,
+                );
+              },
+            );
+          default:
+            return null;
+        }
       },
     );
   }
@@ -111,7 +163,6 @@ class Home extends StatelessWidget {
 
 class DisplayPage extends StatefulWidget {
   final User? user;
-
   DisplayPage({required this.user});
 
   @override
@@ -120,11 +171,32 @@ class DisplayPage extends StatefulWidget {
 
 class _DisplayPageState extends State<DisplayPage> {
   String weatherInfo = '';
+  String randomText = '';
+
+  final List<String> texts = [
+    '"I hated every minute of training, however if you suffer now, you can live the rest of your life as a champion." -Muhammad Ali',
+    '"If you do not find the time, if you do not do the work, you do not get the results." - Arnold Schwarzenegger',
+    '"I have failed over and over again in my life and that is why I succeed." - Michael Jordan',
+    '"If something stands between you and your success, move it. Never be denied." -Dwayne "The Rock" Johnson',
+    '"Great things come from hard work and perseverance. No excuses." -Kobe Bryant',
+    '"If you do not make time for exercise, you will probably have to make time for illness" -Robin Sharma',
+    '"We are what we repeatedly do. Excellence then is not an act but a habit" -Aristotle',
+    '"To keep the body in good health is duty... otherwise we shall not be able to keep our mind strong and clear" -Buddha',
+    '"Some people want it to happen, some wish it would happen, others make it happen" -Michael Jordan',
+    '"If you want something you never had, you must be willing to do something you have never done" -Thomas Jefferson',
+  ];
 
   @override
   void initState() {
     super.initState();
     fetchWeather();
+    generateRandomText();
+  }
+
+  @override
+  void didUpdateWidget(DisplayPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    generateRandomText();
   }
 
   Future<void> fetchWeather() async {
@@ -133,7 +205,6 @@ class _DisplayPageState extends State<DisplayPage> {
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
-
         double latitude = position.latitude;
         double longitude = position.longitude;
 
@@ -145,10 +216,10 @@ class _DisplayPageState extends State<DisplayPage> {
         if (response.statusCode == 200) {
           final weatherData = json.decode(response.body);
           final currentCondition = weatherData['current']['condition']['text'];
-          final temperature = weatherData['current']['temp_c'];
+          final temperature = weatherData['current']['temp_f'];
           setState(() {
             weatherInfo =
-            'Current Weather: $currentCondition, Temperature: $temperature°C';
+            'Current Weather: $currentCondition, Temperature: $temperature°F';
           });
         } else {
           setState(() {
@@ -176,6 +247,14 @@ class _DisplayPageState extends State<DisplayPage> {
     return status.isGranted;
   }
 
+  void generateRandomText() {
+    final random = Random();
+    final index = random.nextInt(texts.length);
+    setState(() {
+      randomText = texts[index];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,25 +273,48 @@ class _DisplayPageState extends State<DisplayPage> {
               textAlign: TextAlign.center,
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Text(
+                  'Welcome!',
+                  style: TextStyle(fontSize: 24),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Logged in as:',
+                  style: TextStyle(fontSize: 18),
+                ),
+                Text(
+                  widget.user?.email ?? '',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Image.asset(
+              'images/jump.gif',
+              width: 200,
+              height: 200,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              randomText,
+              style: TextStyle(fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+          ),
           Expanded(
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  Text(
-                    'Welcome!',
-                    style: TextStyle(fontSize: 24),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Logged in as:',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    widget.user?.email ?? '',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
                   SizedBox(height: 20),
                   ElevatedButton(
                     child: Text('View Tasks'),
@@ -243,12 +345,18 @@ class TaskListPage extends StatefulWidget {
 }
 
 class _TaskListPageState extends State<TaskListPage> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _titleControllerAdd = TextEditingController();
+  final TextEditingController _descriptionControllerAdd = TextEditingController();
+  final TextEditingController _countControllerAdd = TextEditingController();
+  final TextEditingController _dueDateControllerAdd = TextEditingController();
+  final TextEditingController _titleControllerEdit = TextEditingController();
+  final TextEditingController _descriptionControllerEdit = TextEditingController();
+  final TextEditingController _countControllerEdit = TextEditingController();
+  final TextEditingController _dueDateControllerEdit = TextEditingController();
 
-  Future<void> _createTask() async {
-    final title = _titleController.text;
-    final description = _descriptionController.text;
+  Future<void> _createTask(tTitle, tDescription, tCount, tDate) async {
+    final title = tTitle;
+    final description = tDescription;
 
     if (title.isEmpty) {
       showDialog(
@@ -265,15 +373,14 @@ class _TaskListPageState extends State<TaskListPage> {
       );
       return;
     }
-
     try {
       await FirebaseFirestore.instance.collection('tasks').add({
         'title': title,
         'description': description,
+        'count': tCount,
+        'dueDate': tDate,
         'status': 'pending',
       });
-      _titleController.clear();
-      _descriptionController.clear();
     } catch (e) {
       showDialog(
         context: context,
@@ -339,38 +446,10 @@ class _TaskListPageState extends State<TaskListPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Task List'),
+        backgroundColor: Colors.green,
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.0),
-                ElevatedButton(
-                  child: Text('Add'),
-                  onPressed: _createTask,
-                ),
-              ],
-            ),
-          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('tasks').snapshots(),
@@ -383,11 +462,16 @@ class _TaskListPageState extends State<TaskListPage> {
                       final task = tasks[index].data() as Map<String, dynamic>?;
                       final title = task?['title'] as String?;
                       final description = task?['description'] as String?;
+                      final count = task?['count'] as String?;
+                      final date = task?['dueDate'] as String?;
                       final status = task?['status'] as String?;
-
+                      var countString = "";
+                      if(count != null){
+                        countString = "- Count: $count";
+                      }
                       return ListTile(
-                        title: Text(title ?? ''),
-                        subtitle: Text(description ?? ''),
+                        title: Text("${title ?? ''}"),
+                        subtitle: Text("${(description ?? '')} $countString\nDue $date"),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -414,6 +498,113 @@ class _TaskListPageState extends State<TaskListPage> {
                             ),
                           ],
                         ),
+                        onLongPress: (){
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              //var titleString = title;
+                              return AlertDialog(
+                                scrollable: true,
+                                title: const Text("Edit Exercise"),
+                                content: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      children: [
+                                        TextFormField(
+                                          controller: _titleControllerEdit,
+                                          decoration: InputDecoration(
+                                            labelText: "Title: $title",
+                                          ),
+                                        ),
+                                        TextFormField(
+                                          controller: _descriptionControllerEdit,
+                                          decoration: InputDecoration(
+                                            labelText: "Description: $description",
+                                          ),
+                                        ),
+                                        TextFormField(
+                                          controller: _countControllerEdit,
+                                          decoration: InputDecoration(
+                                            labelText: "Count: $count",
+                                          ),
+                                        ),
+                                        TextFormField(
+                                            controller: _dueDateControllerEdit,
+                                            decoration: InputDecoration(
+                                              labelText: "Due Date: $date",
+                                            ),
+                                            readOnly: true,
+                                            onTap: () async {
+                                              DateTime? pickedDate = await showDatePicker(
+                                                  context: context,
+                                                  initialDate: DateTime.now(), //get today's date
+                                                  firstDate: DateTime.now(), //DateTime.now() - not to allow to choose before today.
+                                                  lastDate: DateTime(2100)
+                                              );
+                                              if(pickedDate != null){
+                                                String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
+                                                setState(() {
+                                                  _dueDateControllerEdit.text = formattedDate;
+                                                });
+                                              }
+                                            }
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    child: const Text("submit"),
+                                    onPressed: () {
+                                      var title = _titleControllerEdit.text;
+                                      var desc = _descriptionControllerEdit.text;
+                                      var count = int.tryParse(_countControllerEdit.text);
+                                      var date = _dueDateControllerEdit.text;
+                                      if(title==""){
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('You must enter a title.'),
+                                            actions: [
+                                              TextButton(
+                                                child: Text('OK'),
+                                                onPressed: () => Navigator.pop(context),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      } else if(date == null){
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('You must enter a due date.'),
+                                            actions: [
+                                              TextButton(
+                                                child: Text('OK'),
+                                                onPressed: () => Navigator.pop(context),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                      else{
+                                        _deleteTask(tasks[index].id);
+                                        _createTask(title, desc, count, date);
+                                        _titleControllerEdit.clear();
+                                        _descriptionControllerEdit.clear();
+                                        _countControllerEdit.clear();
+                                        _dueDateControllerEdit.clear();
+                                        Navigator.pop(context);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
                       );
                     },
                   );
@@ -430,6 +621,115 @@ class _TaskListPageState extends State<TaskListPage> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+          onPressed: (){
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  scrollable: true,
+                  title: const Text("Add Exercise"),
+                  content: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _titleControllerAdd,
+                            decoration: const InputDecoration(
+                              labelText: "Exercise Name",
+                            ),
+                          ),
+                          TextFormField(
+                            controller: _descriptionControllerAdd,
+                            decoration: const InputDecoration(
+                              labelText: "Description",
+                            ),
+                          ),
+                          TextFormField(
+                            controller: _countControllerAdd,
+                            decoration: InputDecoration(
+                              labelText: "Count",
+                            ),
+                          ),
+                          TextFormField(
+                              controller: _dueDateControllerAdd,
+                              decoration: InputDecoration(
+                                labelText: "Due Date",
+                              ),
+                              readOnly: true,
+                              onTap: () async {
+                                DateTime? pickedDate = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now(), //get today's date
+                                    firstDate: DateTime.now(), //DateTime.now() - not to allow to choose before today.
+                                    lastDate: DateTime(2100)
+                                );
+                                if(pickedDate != null){
+                                  String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
+                                  setState(() {
+                                    _dueDateControllerAdd.text = formattedDate;
+                                  });
+                                }
+                              }
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      child: const Text("submit"),
+                      onPressed: () {
+                        var title = _titleControllerAdd.text;
+                        var desc = _descriptionControllerAdd.text;
+                        var count = _countControllerAdd.text;
+                        var date = _dueDateControllerAdd.text;
+                        if(title==""){
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('You must enter a title.'),
+                              actions: [
+                                TextButton(
+                                  child: Text('OK'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else if(date == null){
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('You must enter a due date.'),
+                              actions: [
+                                TextButton(
+                                  child: Text('OK'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        else{
+                          _createTask(title, desc, count, date);
+                          _titleControllerAdd.clear();
+                          _descriptionControllerAdd.clear();
+                          _countControllerAdd.clear();
+                          _dueDateControllerAdd.clear();
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          backgroundColor: Colors.green,
+          child: const Icon(Icons.add)
       ),
     );
   }
@@ -472,106 +772,111 @@ class _LoginWPPageState extends State<LoginWPPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Login'),
+        backgroundColor: Colors.green,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'Login Page',
-              style: TextStyle(fontSize: 24),
-            ),
-            SizedBox(height: 20),
-            TextFormField(
-              controller: emailController,
-              onChanged: (value) {
-                setState(() {
-                  isEmailValid = isFormSubmitted
-                      ? value.contains('@') && value.contains('.com')
-                      : true;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Email',
-                errorText: isFormSubmitted && !isEmailValid
-                    ? 'Invalid email: Must include "@[mail].com"'
-                    : null,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(top: 80), // Adjust the value as needed
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                'Login Page',
+                style: TextStyle(fontSize: 24),
               ),
-            ),
-            SizedBox(height: 10),
-            TextFormField(
-              controller: passwordController,
-              onChanged: (value) {
-                setState(() {
-                  isPasswordValid = isFormSubmitted ? value.length >= 6 : true;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Password',
-                errorText: isFormSubmitted && !isPasswordValid
-                    ? 'Invalid password: Must include 6 characters'
-                    : null,
+              SizedBox(height: 20),
+              TextFormField(
+                controller: emailController,
+                onChanged: (value) {
+                  setState(() {
+                    isEmailValid = isFormSubmitted
+                        ? value.contains('@') && value.contains('.com')
+                        : true;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  errorText: isFormSubmitted && !isEmailValid
+                      ? 'Invalid email: Must include "@[mail].com"'
+                      : null,
+                ),
               ),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              child: Text('Login'),
-              onPressed: () async {
-                setState(() {
-                  isFormSubmitted = true;
-                });
+              SizedBox(height: 10),
+              TextFormField(
+                controller: passwordController,
+                onChanged: (value) {
+                  setState(() {
+                    isPasswordValid = isFormSubmitted ? value.length >= 6 : true;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  errorText: isFormSubmitted && !isPasswordValid
+                      ? 'Invalid password: Must include 6 characters'
+                      : null,
+                ),
+                obscureText: true,
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                child: Text('Login'),
+                onPressed: () async {
+                  setState(() {
+                    isFormSubmitted = true;
+                  });
+                  String email = emailController.text;
+                  String password = passwordController.text;
 
-                String email = emailController.text;
-                String password = passwordController.text;
-
-                if (isEmailValid && isPasswordValid) {
-                  try {
-                    UserCredential userCredential =
-                    await FirebaseAuth.instance.signInWithEmailAndPassword(
-                      email: email,
-                      password: password,
-                    );
-                    if (userCredential.user != null) {
-                      // Successful login
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DisplayPage(user: userCredential.user),
-                        ),
+                  if (isEmailValid && isPasswordValid) {
+                    try {
+                      UserCredential userCredential =
+                      await FirebaseAuth.instance.signInWithEmailAndPassword(
+                        email: email,
+                        password: password,
                       );
-                    } else {
-                      // Incorrect credentials
+                      if (userCredential.user != null) {
+                        // Successful login
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DisplayPage(user: userCredential.user),
+                          ),
+                        );
+                      } else {
+                        // Incorrect credentials
+                        await _showLoginErrorDialog();
+                      }
+                    } catch (e) {
+                      // Error occurred during login
                       await _showLoginErrorDialog();
                     }
-                  } catch (e) {
-                    // Error occurred during login
-                    await _showLoginErrorDialog();
                   }
-                }
-              },
-            ),
-            SizedBox(height: 10),
-            TextButton(
-              child: Text('Create an account'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-            SizedBox(height: 10),
-            TextButton(
-              child: Text('Go to Home Page'),
-              onPressed: () {
-                Navigator.pop(context, '/');
-              },
-            ),
-          ],
+                },
+                style: const ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll<Color>(Colors.green),
+                ),
+              ),
+              SizedBox(height: 10),
+              TextButton(
+                child: Text('Create an account'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              SizedBox(height: 10),
+              TextButton(
+                child: Text('Go to Home Page'),
+                onPressed: () {
+                  Navigator.pop(context, '/');
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
 
 class RegisterPage extends StatefulWidget {
   final AuthService _authService = AuthService();
@@ -596,91 +901,98 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Register'),
+        backgroundColor: Colors.green,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'Register Page',
-              style: TextStyle(fontSize: 24),
-            ),
-            SizedBox(height: 20),
-            TextFormField(
-              controller: widget.emailController,
-              onChanged: (value) {
-                setState(() {
-                  email = value;
-                  isEmailValid = isFormSubmitted
-                      ? (value.contains('@') && value.contains('.'))
-                      : true;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'New Email',
-                errorText: isFormSubmitted && !isEmailValid
-                    ? 'Must include an @[mail].com'
-                    : null,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(top: 80), // Adjust the value as needed
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                'Register Page',
+                style: TextStyle(fontSize: 24),
               ),
-            ),
-            SizedBox(height: 10),
-            TextFormField(
-              controller: widget.passwordController,
-              onChanged: (value) {
-                setState(() {
-                  password = value;
-                  isPasswordValid =
-                  isFormSubmitted ? value.length >= 6 : true;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'New Password',
-                errorText: isFormSubmitted && !isPasswordValid
-                    ? 'Must include 6 characters'
-                    : null,
-              ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                setState(() {
-                  isFormSubmitted = true;
-                });
-
-                if (isEmailValid && isPasswordValid) {
-                  String email = widget.emailController.text;
-                  String password = widget.passwordController.text;
-                  UserCredential? userCredential =
-                  await widget._authService.signUpWithEmailAndPassword(
-                      email, password);
-                  if (userCredential != null) {
-                    setState(() {
-                      showSuccessMessage = true;
-                    });
-                  } else {
-                    // Sign-up failed
-                  }
-                }
-              },
-              child: Text('Register'),
-            ),
-            SizedBox(height: 10),
-            TextButton(
-              child: Text('Already have an account? Login'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-            SizedBox(height: 10),
-            if (showSuccessMessage)
-              ...[
-                SizedBox(height: 20),
-                Text(
-                  'Account created!',
-                  style: TextStyle(fontSize: 18, color: Colors.green),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: widget.emailController,
+                onChanged: (value) {
+                  setState(() {
+                    email = value;
+                    isEmailValid = isFormSubmitted
+                        ? (value.contains('@') && value.contains('.'))
+                        : true;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'New Email',
+                  errorText: isFormSubmitted && !isEmailValid
+                      ? 'Must include an @[mail].com'
+                      : null,
                 ),
-              ],
-          ],
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: widget.passwordController,
+                onChanged: (value) {
+                  setState(() {
+                    password = value;
+                    isPasswordValid =
+                    isFormSubmitted ? value.length >= 6 : true;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  errorText: isFormSubmitted && !isPasswordValid
+                      ? 'Must include 6 characters'
+                      : null,
+                ),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  setState(() {
+                    isFormSubmitted = true;
+                  });
+
+                  if (isEmailValid && isPasswordValid) {
+                    String email = widget.emailController.text;
+                    String password = widget.passwordController.text;
+                    UserCredential? userCredential =
+                    await widget._authService.signUpWithEmailAndPassword(
+                        email, password);
+                    if (userCredential != null) {
+                      setState(() {
+                        showSuccessMessage = true;
+                      });
+                    } else {
+                      // Sign-up failed
+                    }
+                  }
+                },
+                style: const ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll<Color>(Colors.green),
+                ),
+                child: Text('Register'),
+              ),
+              SizedBox(height: 10),
+              TextButton(
+                child: Text('Already have an account? Login'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              SizedBox(height: 10),
+              if (showSuccessMessage)
+                ...[
+                  SizedBox(height: 20),
+                  Text(
+                    'Account created!',
+                    style: TextStyle(fontSize: 18, color: Colors.green),
+                  ),
+                ],
+            ],
+          ),
         ),
       ),
     );
